@@ -1,0 +1,6 @@
+{
+  "username": "mytwitchname",
+  "client_id": "my_app_client_id",
+  "client_secret": "my_app_client_secret",
+  "data_path": "/home/me/.twitch-ticker"
+}

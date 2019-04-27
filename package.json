@@ -1,0 +1,15 @@
+{
+  "name": "twitch-ticker",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && cp config.json build/ && node build/index.js"
+  },
+  "dependencies": {
+    "querystring": "^0.2.0",
+    "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "@types/request": "^2.48.1"
+  }
+}
