@@ -15,7 +15,7 @@ export class Config {
   }
 
   public get(key: string, defaultValue: any = undefined): any {
-    return this.data[key] ? this.data[key] : defaultValue;
+    return this.data[key] !== undefined ? this.data[key] : defaultValue;
   }
 
   public set(key: string, value: any): void {

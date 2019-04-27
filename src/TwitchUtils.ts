@@ -64,17 +64,22 @@ export class TwitchUtils {
     });
   }
 
-  public authenticate(): Promise<void> {
+  public authenticate(subs: boolean, cheers: boolean): Promise<void> {
+    const scopes: string[] = [];
+    if(subs) scopes.push('channel:read:subscriptions');
+    if(cheers) scopes.push('bits:read');
+    const scope = scopes.join(' ');
+
     let server: http.Server;
     return new Promise<string>((resolve, reject) => {
       if(this.auth.get('token')) {
         resolve(this.auth.get('token'));
       } else {
         const url = this.getUrl(this.endpoints.auth, {
+          scope,
           client_id: this.client_id,
           redirect_uri: 'http://localhost:9087',
           response_type: 'code',
-          scope: 'channel:read:subscriptions bits:read',
         });
         server = http.createServer((req, res) => {
           res.writeHead(200, { 'Content-type': 'text/html' });

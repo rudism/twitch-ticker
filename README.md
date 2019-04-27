@@ -1,6 +1,6 @@
 ## twitch-ticker
 
-This node app will authenticate with Twitch and write the name of your most recent follower, subscriber, and top cheerer to text files in a directory of your choice. You can then use these as text sources in OBS Studio to display the user names in your Twitch stream.
+This node app will authenticate with Twitch and write the name of your most recent followers, subscribers, and top cheerers to text files in a directory of your choice. You can then use these as text sources in OBS Studio to display the user names in your Twitch stream.
 
 ### Building and Running
 

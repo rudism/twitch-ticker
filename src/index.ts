@@ -3,10 +3,13 @@ import { Config } from './Config';
 import * as fs from 'fs';
 
 const config = new Config(`${ __dirname }/config.json`);
-const username = config.get('username');
-const client_id = config.get('client_id');
-const client_secret = config.get('client_secret');
-const data_path = config.get('data_path');
+const username: string = config.get('username');
+const client_id: string = config.get('client_id');
+const client_secret: string = config.get('client_secret');
+const data_path: string = config.get('data_path');
+const follows: boolean = config.get('follows', true);
+const subs: boolean = config.get('subs', true);
+const cheers: boolean = config.get('cheers', true);
 
 const twitch = new TwitchUtils(username, client_id, client_secret);
 
@@ -15,34 +18,52 @@ function handleError(err: any) {
   else console.error('an error occurred');
 }
 
-function updateTicker() {
-  twitch.getFollowers().then((followers) => {
-    const follower = followers.length > 0
-      ? followers[0].name : ':(';
-    fs.writeFile(`${ data_path }/twitch_latest_follower.txt`,
-      follower, (err) => {
-        if(err) throw err;
-      });
-  }).catch(handleError);
-  twitch.getSubscribers().then((subs) => {
-    const subscriber = subs.length > 0
-      ? subs[0].name : ':(';
-    fs.writeFile(`${ data_path }/twitch_latest_subscriber.txt`,
-      subscriber, (err) => {
-        if(err) throw err;
-      });
-  }).catch(handleError);
-  twitch.getCheers().then((cheers) => {
-    const cheerer = cheers.length > 0
-      ? `${ cheers[0].name } (${ cheers[0].score })` : ':(';
-    fs.writeFile(`${ data_path }/twitch_top_cheerer.txt`,
-      cheerer, (err) => {
-        if(err) throw err;
-      });
-  }).catch(handleError);
+let lastFollower: string;
+let lastSub: string;
+let topCheer: string;
+
+async function saveFiles(last: string, values: string[], fprefix: string): Promise<string> {
+  if(values.length > 0) {
+    if(values[0] !== last) {
+      last = values[0];
+      console.log(`New ${ fprefix } detected.`);
+      for(let i = 0; i < values.length; i++) {
+        await fs.writeFile(`${ data_path }/${ fprefix }-${ i }.txt`,
+          values[i], (err) => {
+            if(err) throw err;
+          });
+      }
+    }
+  } else {
+    await fs.writeFile(`${ data_path }/${ fprefix }-0.txt`, ':(', (err) => {
+      if(err) throw err;
+    });
+  }
+  return last;
 }
 
-twitch.authenticate().then(() => {
+function updateTicker() {
+  if(follows) {
+    twitch.getFollowers().then(async (followers) => {
+      lastFollower = await saveFiles(lastFollower, followers.map(f => f.name), 'follow');
+    }).catch(handleError);
+  }
+
+  if(subs) {
+    twitch.getSubscribers().then(async (subs) => {
+      lastSub = await saveFiles(lastSub, subs.map(s => s.name), 'sub');
+    }).catch(handleError);
+  }
+
+  if(cheers) {
+    twitch.getCheers().then(async (cheers) => {
+      topCheer = await saveFiles(topCheer, cheers.map(c => `${ c.name }: ${ c.score }`), 'cheer');
+    }).catch(handleError);
+  }
+}
+
+twitch.authenticate(subs, cheers).then(() => {
   console.log(`Files will be saved to ${ data_path }.`);
+  updateTicker();
   setInterval(updateTicker, 1000 * 20);
 }).catch(handleError);
