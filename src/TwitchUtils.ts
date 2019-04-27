@@ -28,16 +28,36 @@ export class TwitchUtils {
     return `${ url }?${ stringify(query) }`;
   }
 
-  private makeRequest(url: string, token: string): Promise<any> {
+  private makeRequest(url: string): Promise<any> {
     return new Promise((resolve, reject) => {
       request({
         url,
         method: 'GET',
         json: true,
-        headers: { Authorization: `Bearer ${ token }` }
+        headers: { Authorization: `Bearer ${ this.auth.get('token') }` }
       }, (err, resp, body) => {
         if(err) reject(err);
-        resolve(body);
+        if(resp.statusCode === 200) resolve(body);
+        else if(resp.statusCode === 401) {
+          const refreshurl = this.getUrl(this.endpoints.token, {
+            client_id: this.client_id,
+            client_secret: this.client_secret,
+            grant_type: 'refresh_token',
+            refresh_token: this.auth.get('refresh')
+          });
+          request({
+            method: 'POST',
+            url: refreshurl,
+            json: true
+          }, (err, resp, body) => {
+            if(err) reject(err);
+            else {
+              this.auth.set('token', body.access_token);
+              this.auth.set('refresh', body.refresh_token);
+              resolve(this.makeRequest(url));
+            }
+          });
+        } else reject(new Error('could not authenticate'));
       });
     });
   }
@@ -83,9 +103,11 @@ export class TwitchUtils {
             json: true
           }, (err, resp, body) => {
             if(err) reject(err);
-            this.auth.set('token', body.access_token);
-            this.auth.set('refresh', body.refresh_token);
-            resolve(body.access_token);
+            if(resp.statusCode === 200) {
+              this.auth.set('token', body.access_token);
+              this.auth.set('refresh', body.refresh_token);
+              resolve(body.access_token);
+            } else reject(new Error('could not authenticate'));
           });
         }).listen(9087);
         exec(`xdg-open "${ url }"`);
@@ -95,7 +117,7 @@ export class TwitchUtils {
       this.auth.set('token', auth_token);
       return this.makeRequest(this.getUrl(this.endpoints.user, {
         login: this.username,
-      }), this.auth.get('token'));
+      }));
     }).then((body) => {
       this.auth.set('user_id', body.data[0].id);
     });
@@ -104,7 +126,7 @@ export class TwitchUtils {
   public getFollowers(): Promise<{ id: string, name: string }[]> {
     return this.makeRequest(this.getUrl(this.endpoints.follows, {
         to_id: this.auth.get('user_id')
-    }), this.auth.get('token')).then((body) => {
+    })).then((body) => {
       return body.data.map((user: any) => {
         return { id: user.from_id, name: user.from_name };
       });
@@ -114,7 +136,7 @@ export class TwitchUtils {
   public getSubscribers(): Promise<{ id: string, name: string }[]> {
     return this.makeRequest(this.getUrl(this.endpoints.subscribers, {
         broadcaster_id: this.auth.get('user_id')
-    }), this.auth.get('token')).then((body) => {
+    })).then((body) => {
       return body.data.map((sub: any) => {
         return { id: sub.user_id, name: sub.user_name };
       });
@@ -123,7 +145,7 @@ export class TwitchUtils {
 
   public getCheers(): Promise<{ id: string, name: string, score: number }[]> {
     return this.makeRequest(
-      this.getUrl(this.endpoints.cheers, {}), this.auth.get('token'))
+      this.getUrl(this.endpoints.cheers, {}))
     .then((body) => {
       return body.data.map((cheer: any) => {
         return { id: cheer.user_id, name: cheer.user_name, score: cheer.score };
