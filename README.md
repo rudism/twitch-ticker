@@ -12,3 +12,12 @@ You'll need to register a new application at https://dev.twitch.tv and generate 
 ```
 
 The first time you run it, a browser window will open requiring you to log into Twitch and grant the application access. Once access has been granted, the usernames will be output to the directory specified in your config. You should only have to grant access once (your access token will be saved to an `auth.json` file).
+
+To make running it easier after your initial build, you can put something like this in your path:
+
+```
+#!/bin/env sh
+
+rm -f ~/.twitch-ticker/*.txt
+node /path/to/twitch-ticker/build/index.js
+```
