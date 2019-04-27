@@ -52,9 +52,11 @@ export class TwitchUtils {
           }, (err, resp, body) => {
             if(err) reject(err);
             else {
-              this.auth.set('token', body.access_token);
-              this.auth.set('refresh', body.refresh_token);
-              resolve(this.makeRequest(url));
+              if(resp.statusCode === 200) {
+                this.auth.set('token', body.access_token);
+                this.auth.set('refresh', body.refresh_token);
+                resolve(this.makeRequest(url));
+              } else reject(new Error('could not authenticate'));
             }
           });
         } else reject(new Error('could not authenticate'));
